@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/global.dart';
 import 'login.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
 
 class LoggedIn extends StatefulWidget {
@@ -21,6 +22,14 @@ class _LoggedInState extends State<LoggedIn> {
   void initState() {
     super.initState();
     fetchNotes();
+    _searchController.addListener(_filterNotes);
+  }
+
+   @override
+  void dispose() {
+    _searchController.removeListener(_filterNotes);
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _showMessage(String message) {
@@ -40,18 +49,16 @@ class _LoggedInState extends State<LoggedIn> {
       final data = jsonDecode(response.body);
       setState(() {
         notes = List<Map<String, dynamic>>.from(data['notes']);
+        filteredNotes = notes;
       });
     }
   }
 
   String sanitizeNoteContent(String content) {
-  // Step 1: Trim whitespace from the start and end
   content = content.trim();
   
-  // Step 2: Remove potentially harmful characters (HTML tags, JS scripts, etc.)
   content = removeHtmlTags(content);
   
-  // Step 3: Limit the length of the note (optional, e.g., max 500 characters)
   content = sanitizeLength(content, 500);
   
   return content;
@@ -93,12 +100,46 @@ String removeHtmlTags(String input) {
     );
 
     if (response.statusCode == 201) {
-      _noteController.clear(); // Clear input field after adding
-      fetchNotes(); // Refresh notes after adding
+      _noteController.clear();
+      fetchNotes();
     } else {
       _showErrorDialog("Failed to add note. Please try again.");
       fetchNotes();
     }
+  }
+
+  Future<void> updateNote(int id, String newContent) async {
+    String content = newContent; 
+
+    if (content.isEmpty) {
+      _showErrorDialog("Note content cannot be empty!");
+      return;
+    }
+
+    content = content.replaceAll(RegExp(r'<[^>]*>|&[^;]+;'), '');
+
+    sanitizeNoteContent(content);
+
+    final response = await http.put(
+      Uri.parse('$GLOB_host/edit_note/$id'), 
+      headers: {
+        'Authorization': 'Bearer ${widget.jwtToken}',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'content': content}),
+    );
+
+    if (response.statusCode == 200) {
+      _noteController.clear();
+      fetchNotes();
+    } else {
+      _showErrorDialog("Failed to edit. Please try again.");
+      fetchNotes();
+    }
+  }
+
+  void _shareNote(String content) {
+    Share.share(content);
   }
 
   Future<void> deleteNote(int id) async {
@@ -147,7 +188,7 @@ String removeHtmlTags(String input) {
             decoration: InputDecoration(
               hintText: 'Enter note content...',
             ),
-            maxLines: null, // Allow multiline input
+            maxLines: null,
           ),
           actions: [
             TextButton(
@@ -159,7 +200,7 @@ String removeHtmlTags(String input) {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                addNote(); // Call addNote after sanitizing
+                addNote();
               },
               child: Text("Add"),
             ),
@@ -167,6 +208,55 @@ String removeHtmlTags(String input) {
         );
       },
     );
+  }
+  
+
+  void showEditDialog(Map<String, dynamic> note) {
+    print(note);
+  
+    TextEditingController _controller =
+        TextEditingController(text: note['content']);
+
+    print(note['content']);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Edit Note"),
+          content: TextField(
+            controller: _controller,
+            decoration: InputDecoration(labelText: "New Content"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                updateNote(note['id'], _controller.text);
+                Navigator.pop(context);
+              },
+              child: Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<Map<String, dynamic>> filteredNotes = [];
+  TextEditingController _searchController = TextEditingController();
+
+  void _filterNotes() {
+    setState(() {
+      filteredNotes = notes
+          .where((note) => note['content']
+              .toLowerCase()
+              .contains(_searchController.text.toLowerCase()))
+          .toList();
+    });
   }
 
   @override
@@ -177,7 +267,6 @@ String removeHtmlTags(String input) {
         actions: [
           TextButton(
             onPressed: () {
-              // Navigate to LoginPage
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => LoginPage()),
@@ -193,7 +282,7 @@ String removeHtmlTags(String input) {
         child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: notes.map((note) {
+            children: filteredNotes.map((note) {
               return Container(
                 width: MediaQuery.of(context).size.width * 0.8,
                 margin: EdgeInsets.symmetric(vertical: 8),
@@ -225,8 +314,16 @@ String removeHtmlTags(String input) {
                       ),
                     ),
                     IconButton(
+                      icon: Icon(Icons.edit, color: Colors.lightGreen),
+                      onPressed: () => {showEditDialog(note)},
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.share, color: Colors.deepOrange),
+                      onPressed: () => {_shareNote(note['content'])},
+                    ),
+                    IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => deleteNote(note['id']), // Call delete function
+                      onPressed: () => deleteNote(note['id']),
                     ),
                   ],
                 ),
@@ -239,6 +336,18 @@ String removeHtmlTags(String input) {
         onPressed: showAddNoteDialog,
         child: Icon(Icons.add),
       ),
+      bottomNavigationBar: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Search Notes',
+                hintText: 'Search for a note...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
     );
   }
+
 }

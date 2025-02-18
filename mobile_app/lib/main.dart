@@ -4,7 +4,7 @@ import 'theme_provider.dart';
 import 'database_helper.dart';
 import 'dart:io';
 import 'self_signed_override.dart';
-import 'login.dart'; // Assuming LoginPage is in a separate file
+import 'login.dart';
 
 void main() async {
   HttpOverrides.global = MyHttpOverrides();
@@ -38,8 +38,8 @@ class MyApp extends StatelessWidget {
             ),
             themeMode: themeProvider.isDarkTheme
                 ? ThemeMode.dark
-                : ThemeMode.light, // Use the selected theme
-            home: LoginPage(), // Default starting page
+                : ThemeMode.light,
+            home: LoginPage(),
           );
         },
       ),
@@ -60,7 +60,6 @@ class MainPage extends StatelessWidget {
           children: <Widget>[
             ElevatedButton(
               onPressed: () {
-                // Navigate to LoginPage
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => LoginPage()),
@@ -73,10 +72,9 @@ class MainPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Toggle theme when the button is pressed
           Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
         },
-        child: Icon(Icons.brightness_6), // Theme change icon
+        child: Icon(Icons.brightness_6),
         tooltip: 'Toggle Theme',
       ),
     );

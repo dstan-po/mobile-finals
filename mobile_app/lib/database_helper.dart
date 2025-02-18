@@ -19,7 +19,7 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     String databasePath = join(await getDatabasesPath(), 'theme.db');
 
-    return openDatabase(databasePath, version: 1, onCreate: (db, version) async {
+    return openDatabase(databasePath, password: "Bad plaintext password", version: 1, onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE settings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,

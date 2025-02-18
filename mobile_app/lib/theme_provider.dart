@@ -11,7 +11,7 @@ class ThemeProvider extends ChangeNotifier {
   // Toggle theme and update the database
   void toggleTheme() {
     _isDarkTheme = !_isDarkTheme;
-    DatabaseHelper().updateTheme(_isDarkTheme); // Update the database
-    notifyListeners(); // Notify listeners to rebuild with the new theme
+    DatabaseHelper().updateTheme(_isDarkTheme);
+    notifyListeners();
   }
 }

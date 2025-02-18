@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mobile_app/global.dart';
 import 'dart:convert';
-import 'login.dart'; // Ensure you have this page for navigation
+import 'login.dart';
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -13,22 +14,17 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
 
   String sanitizeUsername(String username) {
-  // Trim any leading or trailing whitespace
   username = username.trim();
 
-  // Regular expression to allow only letters, digits, underscores, and dashes
   final RegExp usernameRegExp = RegExp(r'^[a-zA-Z0-9_-]+$');
   
-  // Check if username matches the allowed pattern
   if (!usernameRegExp.hasMatch(username)) {
     _showMessage("Username contains invalid characters. Only letters, numbers, underscores, and dashes are allowed.");
     throw Exception("Username contains invalid characters. Only letters, numbers, underscores, and dashes are allowed.");
   }
 
-  // Optionally, ensure the username is lowercase to normalize
   username = username.toLowerCase();
 
-  // Ensure that the username has a minimum and maximum length (e.g., 3 to 30 characters)
   if (username.length < 3 || username.length > 30) {
     _showMessage("Username must be between 3 and 30 characters long.");
     throw Exception("Username must be between 3 and 30 characters long.");
@@ -44,13 +40,11 @@ class _RegisterPageState extends State<RegisterPage> {
     sanitizeUsername(username);
 
     if (username.isEmpty || password.isEmpty) {
-      // Show a message if fields are empty
       _showMessage('Please enter both username and password.');
       return;
     }
 
-    // Set the URL of your API
-    final Uri url = Uri.parse('https://192.168.1.138:5000/register');
+    final Uri url = Uri.parse('$GLOB_host/register');
 
     try {
       final response = await http.post(
@@ -63,17 +57,14 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (response.statusCode == 201) {
-        // Successful registration, navigate to EmptyPage
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => LoginPage()),
         );
       } else {
-        // Handle unsuccessful registration
         _showMessage('Registration failed, user already exists.');
       }
     } catch (e) {
-      // Handle error
       _showMessage('An error occurred. Please check your connection.');
     }
   }

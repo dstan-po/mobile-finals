@@ -6,16 +6,12 @@ from flask import Flask, request, jsonify, request, redirect
 
 app = Flask(__name__)
 
-# Secret key for JWT
 SECRET_KEY = "your_secret_key_here"
 
-
-# Initialize the database
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
 
-    # Users table
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +20,6 @@ def init_db():
         )
     ''')
 
-    # Notes table
     c.execute('''
         CREATE TABLE IF NOT EXISTS notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,27 +34,22 @@ def init_db():
 
 init_db()
 
-
-# Hash password before storing
 def hash_password(password):
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed.decode('utf-8')
 
 
-# Verify password
 def verify_password(password, hashed_password):
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 
-# Create JWT token
 def create_jwt_token(username):
     expiration = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
     payload = {'username': username, 'exp': expiration}
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 
-# Decode JWT token
 def decode_jwt_token(token):
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
@@ -113,7 +103,6 @@ def login():
     return jsonify({"message": "Login successful", "token": token}), 200
 
 
-# Middleware to check for JWT token in protected routes
 def get_logged_in_user():
     token = request.headers.get('Authorization')
 
@@ -121,7 +110,7 @@ def get_logged_in_user():
         return None
 
     if token.startswith("Bearer "):
-        token = token.split(" ")[1]  # Remove "Bearer " prefix
+        token = token.split(" ")[1]
 
     decoded = decode_jwt_token(token)
     if decoded:
@@ -152,7 +141,6 @@ def add_note():
 
 @app.before_request
 def enforce_https():
-    # Check if the request is coming via HTTP and redirect to HTTPS
     if not request.is_secure:
         url = request.url.replace("http://", "https://", 1)
         return redirect(url, code=301)
@@ -181,6 +169,35 @@ def delete_note():
 
     return jsonify({"message": "Note deleted successfully"}), 200
 
+@app.route('/edit_note/<int:note_id>', methods=['PUT'])
+def edit_note(note_id):
+    username = get_logged_in_user()
+    if not username:
+        return jsonify({"message": "Unauthorized"}), 403
+
+    data = request.json
+    new_content = data.get('content', '').strip()
+
+    if not new_content:
+        return jsonify({"error": "Note content cannot be empty"}), 400
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM notes WHERE id = ? AND username = ?", (note_id, username))
+    note = cursor.fetchone()
+
+    if not note:
+        return jsonify({"error": "Note not found or unauthorized"}), 404
+
+    # Update the note
+    cursor.execute("UPDATE notes SET content = ? WHERE id = ? AND username = ?",
+                   (new_content, note_id, username))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Note updated successfully"}), 200
 
 @app.route('/notes', methods=['GET'])
 def get_all_notes():
@@ -198,4 +215,4 @@ def get_all_notes():
 
 
 if __name__ == '__main__':
-    app.run(ssl_context=('cert.pem', 'key.pem'), host='0.0.0.0', port=5000, debug=False)
+    app.run(ssl_context=('cert.pem', 'key.pem'), host='0.0.0.0', port=5000, debug=True)

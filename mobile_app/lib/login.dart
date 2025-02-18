@@ -150,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: 'Username'),
               keyboardType: TextInputType.emailAddress,
             ),
             SizedBox(height: 16),

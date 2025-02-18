@@ -1,5 +1,5 @@
-library globals; // Optional but helps avoid naming conflicts
+library globals;
 
 String GLOB_JWT = "";
 String GLOB_username = "";
-String GLOB_host = "https://192.168.1.138:5000/";
+String GLOB_host = "https://192.168.217.35:5000/";
